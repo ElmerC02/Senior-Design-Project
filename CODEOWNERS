@@ -1,0 +1,6 @@
+*                 @ElmerCastellanos @PhatDuong @JoseEspinoza @GuillermoDiaz
+/public/*         @ElmerCastellanos
+/server/server.js @PhatDuong
+/server/sql/*     @JoseEspinoza
+/server/scripts/* @JoseEspinoza
+docker-compose.yml @PhatDuong
