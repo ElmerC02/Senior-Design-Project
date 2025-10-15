@@ -10,7 +10,6 @@ Inspired by “Cool Math Games,” redesigned to be more stimulating and modern.
 - [Tech Stack](#tech-stack)
 - [Getting Started](#getting-started)
 - [Development Workflow](#development-workflow)
-- [Pages & Routing](#pages--routing)
 - [Accessibility & UX](#accessibility--ux)
 - [Coding Standards](#coding-standards)
 - [Milestones & Weekly Log](#milestones--weekly-log)
@@ -56,16 +55,6 @@ Inspired by “Cool Math Games,” redesigned to be more stimulating and modern.
 ## Development Workflow
 - **Branching:** `main` (stable) → feature branches (`feat/navbar`, `feat-pages`, etc.)
 - **Commits:** Short, imperative messages
-
----
-
-## Pages & Routing
-- `/index.html` — Landing/Home
-- `/games/` — (placeholder folder for future game pages)
-- `/account/` — (optional future: login/signup/profile)
-- `/leaderboard/` — (optional future: static layout first, API later)
-
-**Navigation:** Header links should be present and functional, even if some pages are placeholders.
 
 ---
 
