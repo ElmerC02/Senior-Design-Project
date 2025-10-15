@@ -117,6 +117,47 @@ Inspired by “Cool Math Games,” redesigned to be more stimulating and modern.
 - Document API stubs (scores/auth) for later integration.
 
 ---
+```
+umg/
+├─ .github/
+│  ├─ ISSUE_TEMPLATE/                # (Elmer) Bug/Task templates
+│  │  ├─ bug.md
+│  │  └─ task.md
+│  └─ pull_request_template.md       # (Elmer) PR checklist
+├─ .vscode/
+│  └─ settings.json                  # (Guillermo) formatOnSave, etc.
+├─ docs/
+│  └─ proposal.pdf                   # (Elmer) project artifacts
+├─ public/                           # (Guillermo) static front-end root
+│  ├─ assets/
+│  │  ├─ img/
+│  │  └─ icons/
+│  ├─ css/
+│  │  └─ styles.css
+│  ├─ js/
+│  │  └─ main.js                     # light site-wide JS (no game logic)
+│  ├─ index.html                     # home
+│  ├─ leaderboard/                   # placeholder page (future)
+│  │  └─ index.html
+│  └─ account/                       # placeholder page (future)
+│     └─ index.html
+├─ server/                           # (Phat) API + (Jose) DB files
+│  ├─ server.js                      # Express skeleton (/health, /db/health)
+│  ├─ sql/                           # (Jose) schema + seed
+│  │  ├─ 001_schema.sql
+│  │  └─ 002_seed.sql
+│  └─ scripts/                       # (Jose) utility scripts
+│     └─ db-apply.js                 # runs SQL files in order
+├─ .env.example                      # (Phat) sample env (no secrets)
+├─ docker-compose.yml                # (Phat) Postgres (+ optional pgAdmin)
+├─ package.json                      # (Guillermo/Phat) npm scripts
+├─ .gitignore                        # (Elmer) node_modules, .env, etc.
+├─ README.md                         # (Elmer) tech stack, run steps
+├─ CONTRIBUTING.md                   # (Elmer) branching/PR rules
+└─ CODEOWNERS                        # (Elmer) auto-reviewers by path
+
+```
+---
 
 ## Contributing
 1. Open an issue describing the change.
