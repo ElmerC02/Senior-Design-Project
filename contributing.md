@@ -12,5 +12,3 @@ Example: feat(leaderboard): add table
 
 - 1 approval required
 - Squash & merge
-
-s
