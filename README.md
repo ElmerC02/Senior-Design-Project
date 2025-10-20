@@ -117,44 +117,58 @@ Inspired by “Cool Math Games,” redesigned to be more stimulating and modern.
 - Document API stubs (scores/auth) for later integration.
 
 ---
+
 ```
 umg/
-├─ .github/
-│  ├─ ISSUE_TEMPLATE/                # (Elmer) Bug/Task templates
-│  │  ├─ bug.md
-│  │  └─ task.md
-│  └─ pull_request_template.md       # (Elmer) PR checklist
-├─ .vscode/
-│  └─ settings.json                  # (Guillermo) formatOnSave, etc.
-├─ docs/
-│  └─ proposal.pdf                   # (Elmer) project artifacts
-├─ public/                           # (Guillermo) static front-end root
-│  ├─ assets/
-│  │  ├─ img/
-│  │  └─ icons/
-│  ├─ css/
-│  │  └─ styles.css
-│  ├─ js/
-│  │  └─ main.js                     # light site-wide JS (no game logic)
-│  ├─ index.html                     # home
-│  ├─ leaderboard/                   # placeholder page (future)
-│  │  └─ index.html
-│  └─ account/                       # placeholder page (future)
-│     └─ index.html
-├─ server/                           # (Phat) API + (Jose) DB files
-│  ├─ server.js                      # Express skeleton (/health, /db/health)
-│  ├─ sql/                           # (Jose) schema + seed
-│  │  ├─ 001_schema.sql
-│  │  └─ 002_seed.sql
-│  └─ scripts/                       # (Jose) utility scripts
-│     └─ db-apply.js                 # runs SQL files in order
-├─ .env.example                      # (Phat) sample env (no secrets)
-├─ docker-compose.yml                # (Phat) Postgres (+ optional pgAdmin)
-├─ package.json                      # (Guillermo/Phat) npm scripts
-├─ .gitignore                        # (Elmer) node_modules, .env, etc.
-├─ README.md                         # (Elmer) tech stack, run steps
-├─ CONTRIBUTING.md                   # (Elmer) branching/PR rules
-└─ CODEOWNERS                        # (Elmer) auto-reviewers by path
+├─ .github/                                  [Owner: Elmer Castellanos]
+│  ├─ ISSUE_TEMPLATE/                        [Owner: Elmer Castellanos]
+│  │  ├─ bug.md                              [Owner: Elmer Castellanos]
+│  │  └─ task.md                             [Owner: Elmer Castellanos]
+│  └─ pull_request_template.md               [Owner: Elmer Castellanos]
+├─ .vscode/                                  [Owner: Guillermo Diaz]
+│  └─ settings.json                          [Owner: Guillermo Diaz]
+├─ docs/                                     [Owner: Elmer Castellanos]
+│  └─ proposal.pdf                           [Owner: Elmer Castellanos]
+├─ public/                                   [Owner: Guillermo Diaz]
+│  ├─ assets/                                [Owner: Guillermo Diaz]
+│  │  ├─ img/                                [Owner: Guillermo Diaz]
+│  │  └─ icons/                              [Owner: Guillermo Diaz]
+│  ├─ css/                                   [Owner: Guillermo Diaz]
+│  │  └─ styles.css                          [Owner: Guillermo Diaz]
+│  ├─ js/                                    [Owner: Guillermo Diaz]
+│  │  └─ main.js                             [Owner: Guillermo Diaz]
+│  ├─ index.html                             [Owner: Guillermo Diaz]
+│  ├─ leaderboard/                           [Owner: Guillermo Diaz]
+│  │  └─ index.html                          [Owner: Guillermo Diaz]
+│  └─ account/                               [Owner: Guillermo Diaz]
+│     └─ index.html                          [Owner: Guillermo Diaz]
+├─ app/                                      [Owner: Guillermo Diaz]        ← React (Vite) app
+│  ├─ index.html                             [Owner: Guillermo Diaz]
+│  ├─ package.json                           [Owner: Guillermo Diaz]
+│  ├─ vite.config.ts                         [Owner: Guillermo Diaz]
+│  └─ src/                                   [Owner: Guillermo Diaz]
+│     ├─ main.tsx                            [Owner: Guillermo Diaz]
+│     ├─ App.tsx                             [Owner: Guillermo Diaz]
+│     └─ routes/                             [Owner: Guillermo Diaz]
+│        ├─ Home.tsx                         [Owner: Guillermo Diaz]
+│        ├─ Leaderboard.tsx                  [Owner: Guillermo Diaz]
+│        └─ Account.tsx                      [Owner: Guillermo Diaz]
+├─ server/                                   [Owner: Phat Duong]
+│  ├─ server.js                              [Owner: Phat Duong]
+│  ├─ sql/                                   [Owner: Jose Espinoza]
+│  │  ├─ 001_schema.sql                      [Owner: Jose Espinoza]
+│  │  └─ 002_seed.sql                        [Owner: Jose Espinoza]
+│  └─ scripts/                               [Owner: Jose Espinoza]
+│     └─ db-apply.js                         [Owner: Jose Espinoza]
+├─ .env.example                              [Owner: Phat Duong]
+├─ docker-compose.yml                        [Owner: Phat Duong]
+├─ package.json                              [Owner: Phat Duong]            ← root (API/dev scripts)
+├─ .gitignore                                [Owner: Elmer Castellanos]
+├─ README.md                                 [Owner: Elmer Castellanos]
+├─ CONTRIBUTING.md                           [Owner: Elmer Castellanos]
+└─ CODEOWNERS                                [Owner: Elmer Castellanos]
+
+
 
 ```
 ---
