@@ -1,0 +1,12 @@
+{
+  "name": "sprint3-memo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*"],
+  "scripts": {
+    "dev:fe": "npm --workspace @umg/frontend run dev",
+    "dev:api": "npm --workspace @umg/server run dev",
+    "build": "npm --workspaces run build",
+    "start": "npm --workspace @umg/server run start"
+  }
+}
