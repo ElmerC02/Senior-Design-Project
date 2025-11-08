@@ -8,3 +8,9 @@ ON CONFLICT (code) DO NOTHING;
 INSERT INTO users (email, display_name, password_hash) VALUES
   ('guest@example.com', 'Guest', '$2b$10$examplehash...')
 ON CONFLICT (email) DO NOTHING;
+
+DROP VIEW IF EXISTS leaderboard;
+CREATE VIEW leaderboard AS
+SELECT s.game_id, s.user_id, MAX(s.value) AS best_value
+FROM scores s
+GROUP BY s.game_id, s.user_id;
