@@ -51,7 +51,7 @@ jobs:
 
       - name: Run database setup
         working-directory: apps/server
-        run: npm run db:setup
+        run: npm run db:reset
         env:
           DATABASE_URL: postgres://umg:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432/umg
 
