@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: umg
+          POSTGRES_PASSWORD: umg_pw
+          POSTGRES_DB: umg
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U umg -d umg"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build --if-present
+
+      - name: Run database setup
+        run: npm run db:setup
+        env:
+          DATABASE_URL: postgres://umg:umg_pw@localhost:5432/umg
+
+      - name: Lint code
+        run: npm run lint --if-present
+
+      - name: Run unit tests
+        run: npm test --if-present
