@@ -34,7 +34,9 @@ CREATE INDEX IF NOT EXISTS idx_scores_game_value ON scores (game_id, value DESC)
 CREATE INDEX IF NOT EXISTS idx_scores_user ON scores (user_id);
 
 -- Simple materialized leaderboard view substitute (best score per user per game)
-CREATE VIEW IF NOT EXISTS leaderboard AS
+DROP VIEW IF EXISTS leaderboard;
+CREATE VIEW leaderboard AS
 SELECT s.game_id, s.user_id, MAX(s.value) AS best_value
 FROM scores s
 GROUP BY s.game_id, s.user_id;
+
