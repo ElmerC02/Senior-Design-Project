@@ -1,8 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { pool } from "./db.js";
-import scores from "./routes/scores.js";
+import { pool } from "./db";
+import scores from "./routes/scores";
 
 const app = express();
 app.use(cors());
