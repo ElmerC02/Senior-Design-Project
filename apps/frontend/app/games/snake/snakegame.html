@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snake Game with Math Challenge</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: #111;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+    }
+
+    canvas {
+      border: 2px solid #0f0;
+      background-color: #000;
+    }
+
+    #score {
+      margin-top: 10px;
+      font-size: 1.2em;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 8px 18px;
+      font-size: 1em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #0f0;
+      color: #000;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      background-color: #6f6;
+    }
+
+    #controls {
+      display: flex;
+      flex-direction: row;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    /* 🔹 Modal styling */
+    #mathModal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+
+    #mathModal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: #222;
+      border: 2px solid #0f0;
+      border-radius: 12px;
+      padding: 20px 30px;
+      text-align: center;
+      color: white;
+      box-shadow: 0 0 20px #0f0;
+      max-width: 300px;
+      width: 100%;
+    }
+
+    .modal-content input {
+      width: 80%;
+      padding: 8px;
+      margin-top: 10px;
+      border-radius: 6px;
+      border: none;
+      text-align: center;
+      font-size: 1.1em;
+    }
+
+    .modal-content button {
+      margin-top: 15px;
+      padding: 8px 18px;
+      font-size: 1em;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #0f0;
+      color: #000;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+
+    .modal-content button:hover {
+      background-color: #6f6;
+    }
+  </style>
+</head>
+<body>
+  <h1>Snake Game</h1>
+  <canvas id="game" width="400" height="400"></canvas>
+  <div id="score">Score: 0</div>
+  
+  <div id="controls">
+    <button id="restart">Restart</button>
+    <button id="continue" disabled>Continue</button>
+  </div>
+
+  <!-- 🧮 Math Challenge Modal -->
+  <div id="mathModal">
+    <div class="modal-content">
+      <h2>Answer to Continue</h2>
+      <p id="mathQuestion">Solve: ?</p>
+      <input type="text" id="mathAnswer" placeholder="Your answer" />
+      <button id="submitAnswer">Submit</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const scoreText = document.getElementById("score");
+    const restartBtn = document.getElementById("restart");
+    const continueBtn = document.getElementById("continue");
+
+    // Modal elements
+    const mathModal = document.getElementById("mathModal");
+    const mathQuestion = document.getElementById("mathQuestion");
+    const mathAnswer = document.getElementById("mathAnswer");
+    const submitAnswer = document.getElementById("submitAnswer");
+
+    const box = 20;
+    let snake, direction, food, score, game;
+    let pausedState = null;
+    let correctAnswer = null; // store the correct answer for math question
+
+    function init() {
+      snake = [{ x: 9 * box, y: 10 * box }];
+      direction = "RIGHT";
+      score = 0;
+      food = randomFood();
+      scoreText.textContent = "Score: " + score;
+      continueBtn.disabled = true;
+
+      if (game) clearInterval(game);
+      game = setInterval(draw, 125);
+    }
+
+    document.addEventListener("keydown", directionControl);
+    restartBtn.addEventListener("click", init);
+    continueBtn.addEventListener("click", continueGame);
+    submitAnswer.addEventListener("click", checkAnswer);
+
+    function directionControl(event) {
+      const key = event.key;
+      if (key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
+      else if (key === "ArrowUp" && direction !== "DOWN") direction = "UP";
+      else if (key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
+      else if (key === "ArrowDown" && direction !== "UP") direction = "DOWN";
+    }
+
+    function draw() {
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, 400, 400);
+
+      for (let i = 0; i < snake.length; i++) {
+        ctx.fillStyle = i === 0 ? "#0f0" : "#0a0";
+        ctx.fillRect(snake[i].x, snake[i].y, box, box);
+      }
+
+      ctx.fillStyle = "#f00";
+      ctx.fillRect(food.x, food.y, box, box);
+
+      let headX = snake[0].x;
+      let headY = snake[0].y;
+
+      if (direction === "LEFT") headX -= box;
+      if (direction === "UP") headY -= box;
+      if (direction === "RIGHT") headX += box;
+      if (direction === "DOWN") headY += box;
+
+      if (headX === food.x && headY === food.y) {
+        score++;
+        scoreText.textContent = "Score: " + score;
+        food = randomFood();
+      } else {
+        snake.pop();
+      }
+
+      const newHead = { x: headX, y: headY };
+
+      if (
+        headX < 0 ||
+        headX >= 400 ||
+        headY < 0 ||
+        headY >= 400 ||
+        collision(newHead, snake)
+      ) {
+        // ✅ Save full-length snake before death
+        const fullSnake = JSON.parse(JSON.stringify(snake));
+
+        clearInterval(game);
+        alert("Game Over! Final Score: " + score);
+        continueBtn.disabled = false;
+        pausedState = { snake: fullSnake, score };
+        return;
+      }
+
+      snake.unshift(newHead);
+    }
+
+    function collision(head, array) {
+      for (let i = 0; i < array.length; i++) {
+        if (head.x === array[i].x && head.y === array[i].y) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    function randomFood() {
+      return {
+        x: Math.floor(Math.random() * 20) * box,
+        y: Math.floor(Math.random() * 20) * box,
+      };
+    }
+
+    // 🧮 Create a random math question
+    function askMathQuestion() {
+      const operators = ["+", "-", "*", "/"];
+      const op = operators[Math.floor(Math.random() * operators.length)];
+      let num1 = Math.floor(Math.random() * 10) + 1;
+      let num2 = Math.floor(Math.random() * 10) + 1;
+
+      if (op === "/") {
+        num1 = num1 * num2;
+      }
+
+      correctAnswer = eval(`${num1} ${op} ${num2}`);
+      mathQuestion.textContent = `Solve: ${num1} ${op} ${num2} = ?`;
+      mathAnswer.value = "";
+      mathModal.classList.add("active");
+      mathAnswer.focus();
+    }
+
+    // ✅ Check player's answer
+    function checkAnswer() {
+      const userValue = parseFloat(mathAnswer.value);
+      if (userValue === correctAnswer) {
+        mathModal.classList.remove("active");
+        resumeGame();
+      } else {
+        alert("Incorrect answer! Try again.");
+        mathAnswer.value = "";
+        mathAnswer.focus();
+      }
+    }
+
+    function continueGame() {
+      if (pausedState) {
+        askMathQuestion(); // open modal with question
+      }
+    }
+
+    // ✅ Fixed resume function — snake always faces right and keeps its full length
+    function resumeGame() {
+      const { snake: oldSnake, score: oldScore } = pausedState;
+      const centerX = 9 * box;
+      const centerY = 10 * box;
+
+      const length = oldSnake.length;
+      snake = [];
+      for (let i = 0; i < length; i++) {
+        snake.push({
+          x: centerX - i * box,
+          y: centerY
+        });
+      }
+
+      direction = "RIGHT";
+      score = oldScore;
+      food = randomFood();
+      scoreText.textContent = "Score: " + score;
+      continueBtn.disabled = true;
+
+      if (game) clearInterval(game);
+      game = setInterval(draw, 125);
+    }
+
+    // Start the game on load
+    init();
+  </script>
+</body>
+</html>
