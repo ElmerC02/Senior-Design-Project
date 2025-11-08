@@ -13,8 +13,9 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_USER: umg
-          POSTGRES_PASSWORD: umg_pw
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
           POSTGRES_DB: umg
+
         ports:
           - 5432:5432
         options: >-
