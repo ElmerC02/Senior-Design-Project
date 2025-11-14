@@ -1,0 +1,131 @@
+/*
+Guest User Skeleton - Java Script
+--------------------------------------------------------------------------------
+{
+  id: "guest_48fh3",          // session-based unique ID
+  type: "guest",              // distinguishes from registered users
+  createdAt: Date,
+  gameState: {
+    level: 1,
+    score: 0,
+    streak: 0
+  },
+  preferences: {
+    difficulty: "normal",
+    sound: true,
+    theme: "light"
+  }
+}
+--------------------------------------------------------------------------------
+*/
+
+/*
+Backend Skeleton (Rough Express.js)
+--------------------------------------------------------------------------------
+/api/guest/create           → returns new guest user
+/api/guest/state/get        → fetch current game state
+/api/guest/state/update     → update score, level, progress
+--------------------------------------------------------------------------------
+
+***Backend Skeleton - Java Script
+
+--------------------------------------------------------------------------------
+const express = require("express");
+const router = express.Router();
+
+// in-memory store for demonstration
+const guests = new Map();
+
+router.post("/guest/create", (req, res) => {
+  const id = "guest_" + Math.random().toString(36).substring(2, 8);
+
+  const newGuest = {
+    id,
+    type: "guest",
+    createdAt: Date.now(),
+    gameState: {
+      level: 1,
+      score: 0,
+      streak: 0
+    },
+    preferences: {
+      difficulty: "normal",
+      sound: true,
+      theme: "light"
+    }
+  };
+
+  guests.set(id, newGuest);
+  res.json(newGuest);
+});
+
+router.post("/guest/state/update", (req, res) => {
+  const { id, gameState } = req.body;
+  const guest = guests.get(id);
+
+  if (!guest) return res.status(404).json({ error: "Guest not found" });
+
+  guest.gameState = { ...guest.gameState, ...gameState };
+  res.json(guest);
+});
+
+module.exports = router;
+--------------------------------------------------------------------------------
+*/
+
+/*
+***Frontend Skeleton - Deployment of Guess Session - Java Script
+--------------------------------------------------------------------------------
+async function createGuest() {
+  const res = await fetch("/api/guest/create", { method: "POST" });
+  const data = await res.json();
+  localStorage.setItem("guest_id", data.id);
+  return data;
+}
+--------------------------------------------------------------------------------
+
+***Updating Score - Java Script
+--------------------------------------------------------------------------------
+async function updateScore(newScore) {
+  const id = localStorage.getItem("guest_id");
+
+  await fetch("/api/guest/state/update", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id,
+      gameState: { score: newScore }
+    })
+  });
+}
+--------------------------------------------------------------------------------
+*/
+
+/*
+***Database Skeleton - SQL
+--------------------------------------------------------------------------------
+CREATE TABLE guest_users (
+  id TEXT PRIMARY KEY,
+  created_at TIMESTAMP DEFAULT NOW(),
+  level INTEGER DEFAULT 1,
+  score INTEGER DEFAULT 0,
+  streak INTEGER DEFAULT 0,
+  difficulty TEXT DEFAULT 'normal',
+  sound BOOLEAN DEFAULT TRUE,
+  theme TEXT DEFAULT 'light'
+);
+--------------------------------------------------------------------------------
+*/
+
+/*
+***From Guest > Full User - Java Script
+--------------------------------------------------------------------------------
+function convertGuestToUser(guest, userCredentials) {
+  return {
+    ...userCredentials,
+    progress: guest.gameState,
+    preferences: guest.preferences
+  };
+}
+  --------------------------------------------------------------------------------
+*/
