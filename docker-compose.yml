@@ -8,9 +8,10 @@ services:
       POSTGRES_PASSWORD: umg
       POSTGRES_DB: umg
     ports:
-      - "5433:5432"
+      - "5555:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U umg -d umg" ]
       interval: 5s
