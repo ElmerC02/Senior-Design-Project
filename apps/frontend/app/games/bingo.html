@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bingo Game</title>
+
+    <script>
+        function launchConfetti() {
+            const duration = 3000;
+            const end = Date.now() + duration;
+
+            (function frame() {
+                confetti({
+                    particleCount: 6,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 }
+                });
+                confetti({
+                    particleCount: 6,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 }
+                });
+
+                if (Date.now() < end) requestAnimationFrame(frame);
+            })();
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            text-align: center;
+            background: #f7eaea;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            margin-top: 25px;
+            font-size: 42px;
+            color: #b30000;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-shadow: 1px 1px 2px #fff;
+        }
+
+        #container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        #bingo-board {
+            margin: 30px auto;
+            display: grid;
+            grid-template-columns: repeat(5, 90px);
+            gap: 10px;
+            padding: 20px;
+            background: #ffffffdd;
+            border-radius: 18px;
+            box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .cell {
+            width: 90px;
+            height: 90px;
+            background: #fffafa;
+            border: 2px solid #cc0000;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #800000;
+            cursor: pointer;
+            transition: 0.25s;
+        }
+
+        .cell:hover {
+            transform: scale(1.07);
+            background: #ffecec;
+        }
+
+        .marked {
+            background: #ff5c5c;
+            color: white;
+            border-color: #b30000;
+            box-shadow: 0px 0px 10px #ffb3b3 inset;
+        }
+
+        #draw-btn {
+            padding: 14px 35px;
+            background: #b30000;
+            color: white;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            border-radius: 12px;
+            margin-top: 10px;
+            transition: 0.25s;
+        }
+
+        #draw-btn:hover {
+            background: #8e0000;
+        }
+
+        #drawn-number {
+            font-size: 28px;
+            margin-top: 15px;
+            font-weight: bold;
+            color: #cc0000;
+        }
+
+        #math-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.55);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #math-box {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 360px;
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.25);
+        }
+
+        #math-box h2 {
+            margin-top: 0;
+            color: #b30000;
+        }
+
+        #math-box input {
+            width: 100px;
+            padding: 8px;
+            font-size: 22px;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        #submit-answer {
+            padding: 9px 20px;
+            background: #aa0000;
+            color: white;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 8px;
+            margin-left: 10px;
+        }
+
+        #submit-answer:hover {
+            background: #800000;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Bingo Game</h1>
+
+    <div id="container">
+        <div id="bingo-board"></div>
+        <button id="draw-btn">Draw Number</button>
+        <div id="drawn-number"></div>
+    </div>
+
+    <div id="math-modal">
+        <div id="math-box">
+            <h2>Solve this:</h2>
+            <p id="math-question"></p>
+            <input type="number" id="answer">
+            <button id="submit-answer">Submit</button>
+        </div>
+    </div>
+
+<script>
+    const board = document.getElementById("bingo-board");
+    const drawnDisplay = document.getElementById("drawn-number");
+    const modal = document.getElementById("math-modal");
+    const mathQuestionDisplay = document.getElementById("math-question");
+    const answerInput = document.getElementById("answer");
+
+    let bingoCard = [];
+    let marked = [];
+    let drawnNumbers = new Set();
+
+    generateCard();
+    displayCard();
+
+    function generateCard() {
+        let min = 1, max = 15;
+
+        for (let col = 0; col < 5; col++) {
+            let used = new Set();
+            for (let row = 0; row < 5; row++) {
+                let num;
+                do {
+                    num = Math.floor(Math.random() * (max - min + 1)) + min;
+                } while (used.has(num));
+                used.add(num);
+
+                if (!bingoCard[row]) bingoCard[row] = [];
+                bingoCard[row][col] = num;
+
+                if (!marked[row]) marked[row] = [];
+                marked[row][col] = false;
+            }
+            min += 15;
+            max += 15;
+        }
+
+        marked[2][2] = true;
+    }
+
+    function displayCard() {
+        board.innerHTML = "";
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
+                let div = document.createElement("div");
+                div.className = "cell";
+                if (marked[r][c]) div.classList.add("marked");
+
+                div.textContent = marked[r][c] ? "X" : bingoCard[r][c];
+                board.appendChild(div);
+            }
+        }
+    }
+
+    document.getElementById("draw-btn").onclick = () => {
+        showMathQuestion();
+    };
+
+    let correctAnswer = 0;
+
+    function showMathQuestion() {
+        const a = Math.floor(Math.random() * 10) + 1;
+        const b = Math.floor(Math.random() * 10) + 1;
+        const ops = ["+", "-", "*", "/"];
+        let op = ops[Math.floor(Math.random() * ops.length)];
+
+        let A = a, B = b;
+
+        switch(op) {
+            case "+": correctAnswer = a + b; break;
+            case "-": correctAnswer = a - b; break;
+            case "*": correctAnswer = a * b; break;
+            case "/":
+                A = a * b;
+                B = b;
+                correctAnswer = A / B;
+                break;
+        }
+
+        mathQuestionDisplay.textContent = `${A} ${op} ${B}`;
+        modal.style.display = "flex";
+        answerInput.value = "";
+        answerInput.focus();
+    }
+
+    document.getElementById("submit-answer").onclick = () => {
+        let userAnswer = Number(answerInput.value);
+        if (userAnswer === correctAnswer) {
+            modal.style.display = "none";
+            drawNumber();
+        } else {
+            alert("Incorrect! Try again.");
+        }
+    };
+
+    function drawNumber() {
+        let num;
+        do {
+            num = Math.floor(Math.random() * 75) + 1;
+        } while (drawnNumbers.has(num));
+
+        drawnNumbers.add(num);
+        drawnDisplay.textContent = "Number Drawn: " + num;
+
+        markNumber(num);
+        displayCard();
+
+        checkBingo();
+    }
+
+    function markNumber(num) {
+        for (let r = 0; r < 5; r++) {
+            for (let c = 0; c < 5; c++) {
+                if (bingoCard[r][c] === num) {
+                    marked[r][c] = true;
+                }
+            }
+        }
+    }
+
+    function checkBingo() {
+        for (let r = 0; r < 5; r++) {
+            if (marked[r].every(v => v)) return triggerBingo();
+        }
+
+        for (let c = 0; c < 5; c++) {
+            if (marked.every(row => row[c])) return triggerBingo();
+        }
+
+        if ([0,1,2,3,4].every(i => marked[i][i])) return triggerBingo();
+
+        if ([0,1,2,3,4].every(i => marked[i][4-i])) return triggerBingo();
+    }
+
+    function triggerBingo() {
+        launchConfetti();
+        alert("🎉 BINGO! 🎉");
+    }
+</script>
+
+</body>
+</html>
