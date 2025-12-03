@@ -63,6 +63,30 @@ export default function SnakePage() {
   const [correctAnswer, setCorrectAnswer] = useState<number | null>(null);
   const [userAnswer, setUserAnswer] = useState("");
 
+//added -Jose (Calls API)
+  const API_BASE =
+    process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+
+  const submitScore = useCallback(async (value: number) => {
+    try {
+      await fetch(`${API_BASE}/api/scores/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: "testuser1@example.com", //uses test user
+          displayName: "Test User 1", 
+          code: "snake",
+          value,
+        }),
+      });
+      // console.log("Snake score submitted:", value);
+    } catch (err) {
+      console.error("Failed to submit snake score", err);
+    }
+  }, [API_BASE]);
+
+
+
   const reset = useCallback(() => {
     snakeRef.current = [{ x: 9 * BOX, y: 10 * BOX }];
     dirRef.current = "RIGHT";
@@ -116,6 +140,10 @@ export default function SnakePage() {
       setContinueEnabled(true);
       pausedStateRef.current = { snake: fullSnake, score: scoreRef.current };
       sfx.die();
+
+      // Submit score to API -Jose (posts scores to DB using API)
+      submitScore(scoreRef.current);
+
       return;
     }
 

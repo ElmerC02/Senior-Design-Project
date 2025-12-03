@@ -14,7 +14,7 @@
     "predev": "npm run db:up",
     "build": "npm --workspaces run build",
     "start": "npm --workspace @umg/server run start",
-    "dev": "wait-on tcp:127.0.0.1:5433 && concurrently -n api,web -c auto \"npm run dev:api\" \"npm run dev:fe\"",
+    "dev": "wait-on tcp:127.0.0.1:5555 && concurrently -n api,web -c auto \"npm run dev:api\" \"npm run dev:fe\"",
     "postdev": "echo Dev stopped. (DB stays up; run `npm run db:down` to stop it.)"
   },
   "devDependencies": {
