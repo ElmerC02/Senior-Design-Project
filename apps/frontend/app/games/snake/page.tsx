@@ -1,283 +1,414 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Point = { x: number; y: number };
-type PauseState = { snake: Point[]; score: number } | null;
 
-const BOX = 20;
-const WIDTH = 400;
-const HEIGHT = 400;
-const TICK_MS = 125;
-
-/* ---------- audio ---------- */
-let _ctx: AudioContext | null = null;
-function ensureAudio(){
-  if(!_ctx){
-    const AC=(window as any).AudioContext || (window as any).webkitAudioContext;
-    try{ _ctx=new AC(); }catch{}
-  }
-}
-function tone(freq:number, ms=100, type:OscillatorType="square", gain=0.02){
-  if(!_ctx) return;
-  const t0=_ctx.currentTime;
-  const o=_ctx.createOscillator(); const g=_ctx.createGain();
-  o.type=type; o.frequency.value=freq;
-  g.gain.setValueAtTime(0,t0);
-  g.gain.linearRampToValueAtTime(gain,t0+0.01);
-  g.gain.exponentialRampToValueAtTime(0.0001,t0+ms/1000);
-  o.connect(g).connect(_ctx.destination);
-  o.start(t0); o.stop(t0+ms/1000);
-}
-const sfx = {
-  turn: ()=> tone(440,40,"triangle",0.012),
-  eat: ()=> tone(720,120,"sine",0.03),
-  die: ()=> { tone(200,220,"sawtooth",0.03); setTimeout(()=>tone(120,320,"sine",0.02),80); }
-};
-
-/* ---------- helpers ---------- */
-function randomFood(): Point {
-  return {
-    x: Math.floor(Math.random() * (WIDTH / BOX)) * BOX,
-    y: Math.floor(Math.random() * (HEIGHT / BOX)) * BOX,
-  };
-}
-function collide(head: Point, body: Point[]) { return body.some(p => p.x===head.x && p.y===head.y); }
-
-/* ---------- component ---------- */
 export default function SnakePage() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const loopRef = useRef<number | null>(null);
+  // Board settings
+  const COLS = 20;
+  const ROWS = 20;
+  const CELL = 18; // px
 
-  const snakeRef = useRef<Point[]>([{ x: 9 * BOX, y: 10 * BOX }]);
-  const dirRef = useRef<"LEFT" | "RIGHT" | "UP" | "DOWN">("RIGHT");
-  const foodRef = useRef<Point>(randomFood());
-  const scoreRef = useRef<number>(0);
-
+  // Game state
+  const [running, setRunning] = useState(false);
   const [score, setScore] = useState(0);
-  const [continueEnabled, setContinueEnabled] = useState(false);
-  const pausedStateRef = useRef<PauseState>(null);
+  const [gameOver, setGameOver] = useState(false);
 
-  const [modalOpen, setModalOpen] = useState(false);
-  const [question, setQuestion] = useState("Solve: ?");
-  const [correctAnswer, setCorrectAnswer] = useState<number | null>(null);
-  const [userAnswer, setUserAnswer] = useState("");
+  // Snake + direction kept in refs for smooth interval updates
+  const snakeRef = useRef<Point[]>([
+    { x: 9, y: 10 },
+    { x: 8, y: 10 },
+    { x: 7, y: 10 },
+  ]);
 
-//added -Jose (Calls API)
-  const API_BASE =
-    process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+  const dirRef = useRef<Point>({ x: 1, y: 0 }); // moving right
+  const nextDirRef = useRef<Point>({ x: 1, y: 0 });
 
-  const submitScore = useCallback(async (value: number) => {
-    try {
-      await fetch(`${API_BASE}/api/scores/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: "testuser1@example.com", //uses test user
-          displayName: "Test User 1", 
-          code: "snake",
-          value,
-        }),
-      });
-      // console.log("Snake score submitted:", value);
-    } catch (err) {
-      console.error("Failed to submit snake score", err);
-    }
-  }, [API_BASE]);
+  const foodRef = useRef<Point>({ x: 14, y: 10 });
 
+  const tickRef = useRef<number | null>(null);
 
+  // A “render key” to re-render grid from refs
+  const [, force] = useState(0);
 
-  const reset = useCallback(() => {
-    snakeRef.current = [{ x: 9 * BOX, y: 10 * BOX }];
-    dirRef.current = "RIGHT";
-    foodRef.current = randomFood();
-    scoreRef.current = 0;
-    setScore(0);
-    setContinueEnabled(false);
-    pausedStateRef.current = null;
-  }, []);
+  const boardW = COLS * CELL;
+  const boardH = ROWS * CELL;
 
-  const draw = useCallback(() => {
-    const canvas = canvasRef.current; if (!canvas) return;
-    const ctx = canvas.getContext("2d"); if (!ctx) return;
+  const neonShadow = useMemo(() => `0 0 10px rgba(57,255,20,.9), 0 0 30px rgba(57,255,20,.45)`, []);
 
-    // clear
-    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  function randInt(min: number, max: number) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
 
-    // draw snake
+  function pointsEqual(a: Point, b: Point) {
+    return a.x === b.x && a.y === b.y;
+  }
+
+  function spawnFood() {
+    // Put food somewhere not on snake
     const snake = snakeRef.current;
-    for (let i = 0; i < snake.length; i++) {
-      ctx.fillStyle = i === 0 ? "#0f0" : "#0a0";
-      ctx.fillRect(snake[i].x, snake[i].y, BOX, BOX);
+    let tries = 0;
+
+    while (tries < 5000) {
+      const p = { x: randInt(0, COLS - 1), y: randInt(0, ROWS - 1) };
+      if (!snake.some((s) => pointsEqual(s, p))) {
+        foodRef.current = p;
+        return;
+      }
+      tries++;
     }
+  }
 
-    // draw food
-    const food = foodRef.current; ctx.fillStyle = "#f00"; ctx.fillRect(food.x, food.y, BOX, BOX);
+  function resetGame() {
+    snakeRef.current = [
+      { x: 9, y: 10 },
+      { x: 8, y: 10 },
+      { x: 7, y: 10 },
+    ];
+    dirRef.current = { x: 1, y: 0 };
+    nextDirRef.current = { x: 1, y: 0 };
+    setScore(0);
+    setGameOver(false);
+    setRunning(false);
+    spawnFood();
+    force((n) => n + 1);
+  }
 
-    // next head
-    let headX = snake[0].x, headY = snake[0].y;
+  function endGame() {
+    setGameOver(true);
+    setRunning(false);
+  }
+
+  function step() {
+    // Lock in direction at start of tick (prevents instant reverse)
+    dirRef.current = nextDirRef.current;
+
+    const snake = snakeRef.current;
+    const head = snake[0];
     const dir = dirRef.current;
-    if (dir === "LEFT") headX -= BOX;
-    if (dir === "RIGHT") headX += BOX;
-    if (dir === "UP") headY -= BOX;
-    if (dir === "DOWN") headY += BOX;
 
-    // eat?
-    if (headX === food.x && headY === food.y) {
-      scoreRef.current += 1; setScore(scoreRef.current);
-      foodRef.current = randomFood(); sfx.eat();
-    } else {
-      snake.pop();
-    }
+    const newHead = { x: head.x + dir.x, y: head.y + dir.y };
 
-    const newHead = { x: headX, y: headY };
-
-    // hit?
-    const outOfBounds = headX < 0 || headX >= WIDTH || headY < 0 || headY >= HEIGHT;
-    if (outOfBounds || collide(newHead, snake)) {
-      const fullSnake = JSON.parse(JSON.stringify(snake));
-      if (loopRef.current) window.clearInterval(loopRef.current); loopRef.current = null;
-      setContinueEnabled(true);
-      pausedStateRef.current = { snake: fullSnake, score: scoreRef.current };
-      sfx.die();
-
-      // Submit score to API -Jose (posts scores to DB using API)
-      submitScore(scoreRef.current);
-
+    // Wall collision
+    if (newHead.x < 0 || newHead.x >= COLS || newHead.y < 0 || newHead.y >= ROWS) {
+      endGame();
       return;
     }
 
+    // Self collision
+    if (snake.some((p) => pointsEqual(p, newHead))) {
+      endGame();
+      return;
+    }
+
+    // Move: add new head
     snake.unshift(newHead);
-  }, []);
 
-  const startLoop = useCallback(() => {
-    if (loopRef.current) window.clearInterval(loopRef.current);
-    loopRef.current = window.setInterval(draw, TICK_MS);
-  }, [draw]);
-
-  const init = useCallback(() => { reset(); startLoop(); }, [reset, startLoop]);
-
-  // keyboard
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      const key = e.key;
-      const isArrow = ["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(key);
-      const isWasd = ["a","A","d","D","w","W","s","S"].includes(key);
-      if (isArrow || isWasd) { e.preventDefault(); ensureAudio(); }
-
-      const d = dirRef.current;
-      if ((key === "ArrowLeft" || key === "a" || key === "A") && d !== "RIGHT") { dirRef.current = "LEFT"; sfx.turn(); }
-      else if ((key === "ArrowUp" || key === "w" || key === "W") && d !== "DOWN") { dirRef.current = "UP"; sfx.turn(); }
-      else if ((key === "ArrowRight" || key === "d" || key === "D") && d !== "LEFT") { dirRef.current = "RIGHT"; sfx.turn(); }
-      else if ((key === "ArrowDown" || key === "s" || key === "S") && d !== "UP") { dirRef.current = "DOWN"; sfx.turn(); }
+    // Eat food
+    if (pointsEqual(newHead, foodRef.current)) {
+      setScore((s) => s + 10);
+      spawnFood();
+      // Do NOT pop tail -> snake grows
+    } else {
+      // Remove tail -> normal movement
+      snake.pop();
     }
-    window.addEventListener("keydown", onKey, { passive: false });
-    return () => window.removeEventListener("keydown", onKey as any);
-  }, []);
 
-  // touch
+    snakeRef.current = snake;
+
+    // Force re-render
+    force((n) => n + 1);
+  }
+
+  // Keyboard controls
   useEffect(() => {
-    let start: { x: number; y: number } | null = null;
-    function onTouchStart(e: TouchEvent) { ensureAudio(); const t = e.touches[0]; start = { x: t.clientX, y: t.clientY }; }
-    function onTouchEnd(e: TouchEvent) {
-      if (!start) return;
-      const t = e.changedTouches[0]; const dx = t.clientX - start.x; const dy = t.clientY - start.y; start = null;
-      if (Math.abs(dx) < 24 && Math.abs(dy) < 24) return;
-      const d = dirRef.current;
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 0 && d !== "LEFT") { dirRef.current = "RIGHT"; sfx.turn(); }
-        else if (dx < 0 && d !== "RIGHT") { dirRef.current = "LEFT"; sfx.turn(); }
-      } else {
-        if (dy > 0 && d !== "UP") { dirRef.current = "DOWN"; sfx.turn(); }
-        else if (dy < 0 && d !== "DOWN") { dirRef.current = "UP"; sfx.turn(); }
+    const onKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+
+      // Start/Pause with Space
+      if (key === " ") {
+        e.preventDefault();
+        if (!gameOver) setRunning((r) => !r);
+        return;
       }
+
+      const cur = dirRef.current;
+
+      // helper: don't allow direct reverse
+      const setDir = (d: Point) => {
+        // If currently moving, forbid reversing into itself
+        if (cur.x === -d.x && cur.y === -d.y) return;
+        nextDirRef.current = d;
+      };
+
+      if (key === "arrowup" || key === "w") setDir({ x: 0, y: -1 });
+      if (key === "arrowdown" || key === "s") setDir({ x: 0, y: 1 });
+      if (key === "arrowleft" || key === "a") setDir({ x: -1, y: 0 });
+      if (key === "arrowright" || key === "d") setDir({ x: 1, y: 0 });
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [gameOver]);
+
+  // Game loop
+  useEffect(() => {
+    if (tickRef.current) {
+      window.clearInterval(tickRef.current);
+      tickRef.current = null;
     }
-    const el = canvasRef.current;
-    if (el) {
-      el.addEventListener("touchstart", onTouchStart, { passive: true });
-      el.addEventListener("touchend", onTouchEnd, { passive: true });
+
+    if (running && !gameOver) {
+      // speed: lower = faster
+      tickRef.current = window.setInterval(step, 120);
     }
+
     return () => {
-      if (el) {
-        el.removeEventListener("touchstart", onTouchStart as any);
-        el.removeEventListener("touchend", onTouchEnd as any);
+      if (tickRef.current) {
+        window.clearInterval(tickRef.current);
+        tickRef.current = null;
       }
     };
+  }, [running, gameOver]);
+
+  // Initialize food once
+  useEffect(() => {
+    spawnFood();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // mount
-  useEffect(() => { init(); return () => { if (loopRef.current) window.clearInterval(loopRef.current); }; }, [init]);
-
-  const onRestart = () => { ensureAudio(); init(); };
-
-  // Continue flow — simple math modal
-  function makeQuestion(){
-    const ops = ["+","-","*","/"] as const;
-    const op = ops[Math.floor(Math.random()*ops.length)];
-    let a = Math.floor(Math.random()*10)+1, b = Math.floor(Math.random()*10)+1;
-    if (op === "/") a = a * b;
-    const map:{[k:string]:number} = { "+": a+b, "-": a-b, "*": a*b, "/": a/b };
-    return { text: `Solve: ${a} ${op} ${b} = ?`, answer: map[op] };
-  }
-  const onContinue = () => {
-    if (!pausedStateRef.current) return;
-    const q = makeQuestion(); setQuestion(q.text); setCorrectAnswer(q.answer); setUserAnswer(""); setModalOpen(true);
-    setTimeout(()=> (document.getElementById("answer-input") as HTMLInputElement | null)?.focus(), 0);
-  };
-  const checkAnswer = () => {
-    const userVal = Number(userAnswer);
-    if (correctAnswer !== null && userVal === correctAnswer) {
-      setModalOpen(false);
-      const state = pausedStateRef.current!;
-      const centerX = 9 * BOX, centerY = 10 * BOX, len = state.snake.length;
-      const rebuilt: Point[] = []; for (let i=0;i<len;i++) rebuilt.push({ x: centerX - i*BOX, y: centerY });
-      snakeRef.current = rebuilt; dirRef.current = "RIGHT"; foodRef.current = randomFood();
-      scoreRef.current = state.score; setScore(state.score); setContinueEnabled(false); startLoop();
-    } else {
-      alert("Incorrect answer! Try again."); setUserAnswer("");
-      setTimeout(()=> (document.getElementById("answer-input") as HTMLInputElement | null)?.focus(), 0);
-    }
-  };
+  const snake = snakeRef.current;
+  const food = foodRef.current;
 
   return (
-    <section>
-      <h1 className="header">Snake</h1>
-      <p className="sub">Arrow keys / WASD. Touch to swipe.</p>
+    <main style={{ padding: "24px 16px" }}>
+      <style>{`
+        .wrap {
+          max-width: 980px;
+          margin: 0 auto;
+        }
 
-      <div className="row m2">
-        <div className="pill card"><span className="label">SCORE</span><span className="value">{score}</span></div>
-        <button className="btn" onClick={onRestart}>Restart</button>
-        <button className="btn" onClick={onContinue} disabled={!continueEnabled}>Continue</button>
-      </div>
+        .neonShell {
+          background: radial-gradient(circle at 50% 20%, #0f0f0f, #000);
+          border: 2px solid rgba(57,255,20,.85);
+          box-shadow: 0 0 15px rgba(57,255,20,.9), 0 0 55px rgba(57,255,20,.25);
+          border-radius: 18px;
+          padding: 18px;
+        }
 
-      <div className="card center" style={{ padding: 12 }}>
-        <canvas
-          ref={canvasRef}
-          id="game"
-          width={WIDTH}
-          height={HEIGHT}
-          style={{ border: "2px solid #0f0", background: "#000", width: "min(92vw, 400px)", height: "min(92vw, 400px)" }}
-        />
-      </div>
+        .title {
+          font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+          letter-spacing: 3px;
+          font-weight: 900;
+          font-size: 42px;
+          text-align: center;
+          margin: 8px 0 12px;
+          color: #39FF14;
+          text-shadow: 0 0 12px rgba(57,255,20,.95), 0 0 30px rgba(57,255,20,.35);
+        }
 
-      {modalOpen && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal">
-            <h2>Answer to Continue</h2>
-            <p>{question}</p>
-            <input
-              id="answer-input"
-              className="card"
-              value={userAnswer}
-              onChange={(e) => setUserAnswer(e.target.value)}
-              style={{ width: "80%", height: 40, borderRadius: 8, border: "1px solid rgba(0,0,0,.1)", textAlign: "center", fontSize: 18, marginTop: 8 }}
-            />
-            <div className="row center" style={{ marginTop: 14 }}>
-              <button className="btn" onClick={checkAnswer}>Submit</button>
-            </div>
+        .barRow {
+          display: flex;
+          gap: 12px;
+          align-items: center;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-bottom: 14px;
+        }
+
+        .scoreBar {
+          min-width: 260px;
+          padding: 10px 14px;
+          text-align: center;
+          background: #000;
+          border: 2px solid rgba(57,255,20,.85);
+          border-radius: 12px;
+          color: #39FF14;
+          font-weight: 800;
+          box-shadow: inset 0 0 10px rgba(57,255,20,.45);
+        }
+
+        .btnRow {
+          display: flex;
+          gap: 10px;
+          justify-content: center;
+          flex-wrap: wrap;
+          margin-top: 12px;
+        }
+
+        .btn {
+          background: #000;
+          color: #39FF14;
+          border: 2px solid rgba(57,255,20,.85);
+          padding: 10px 16px;
+          border-radius: 12px;
+          font-weight: 900;
+          cursor: pointer;
+          transition: transform .12s ease, box-shadow .2s ease, background .2s ease, color .2s ease;
+        }
+
+        .btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 0 14px rgba(57,255,20,.55);
+          background: #39FF14;
+          color: #000;
+        }
+
+        .hint {
+          text-align: center;
+          margin-top: 10px;
+          color: rgba(57,255,20,.75);
+          font-weight: 700;
+        }
+
+        .board {
+          margin: 0 auto;
+          background: #000;
+          border: 3px solid rgba(57,255,20,.85);
+          border-radius: 14px;
+          box-shadow: 0 0 20px rgba(57,255,20,.35);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .cell {
+          position: absolute;
+          width: ${CELL}px;
+          height: ${CELL}px;
+          border-radius: 6px;
+        }
+
+        .snakeHead {
+          background: #39FF14;
+          box-shadow: 0 0 12px rgba(57,255,20,.9);
+        }
+
+        .snakeBody {
+          background: rgba(57,255,20,.75);
+          box-shadow: 0 0 10px rgba(57,255,20,.45);
+        }
+
+        .food {
+          background: #fff;
+          border-radius: 50%;
+          box-shadow: 0 0 12px rgba(255,255,255,.85);
+        }
+
+        .overlay {
+          position: absolute;
+          inset: 0;
+          display: grid;
+          place-items: center;
+          background: rgba(0,0,0,.55);
+          backdrop-filter: blur(2px);
+        }
+
+        .overlayCard {
+          background: #000;
+          border: 2px solid rgba(57,255,20,.85);
+          border-radius: 14px;
+          padding: 16px;
+          width: min(92%, 420px);
+          text-align: center;
+          box-shadow: 0 0 18px rgba(57,255,20,.45);
+          color: #39FF14;
+        }
+
+        .overlayCard h2 {
+          margin: 0 0 8px;
+          letter-spacing: 2px;
+          text-shadow: 0 0 10px rgba(57,255,20,.85);
+        }
+
+        .overlayCard p {
+          margin: 0 0 12px;
+          opacity: .9;
+          color: rgba(57,255,20,.85);
+        }
+      `}</style>
+
+      <div className="wrap">
+        <div className="neonShell">
+          <div className="title">Enhance SNAKE</div>
+
+          <div className="barRow">
+            <div className="scoreBar">Score: {score}</div>
           </div>
+
+          <div
+            className="board"
+            style={{
+              width: boardW,
+              height: boardH,
+              boxShadow: neonShadow,
+            }}
+          >
+            {/* Snake */}
+            {snake.map((p, i) => (
+              <div
+                key={`${p.x}-${p.y}-${i}`}
+                className={`cell ${i === 0 ? "snakeHead" : "snakeBody"}`}
+                style={{
+                  left: p.x * CELL,
+                  top: p.y * CELL,
+                }}
+              />
+            ))}
+
+            {/* Food */}
+            <div
+              className="cell food"
+              style={{
+                left: food.x * CELL,
+                top: food.y * CELL,
+              }}
+            />
+
+            {/* Game Over overlay */}
+            {gameOver && (
+              <div className="overlay">
+                <div className="overlayCard">
+                  <h2>Game Over</h2>
+                  <p>Your score: {score}</p>
+                  <button className="btn" onClick={resetGame}>
+                    Play Again
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="btnRow">
+            <button
+              className="btn"
+              onClick={() => {
+                if (gameOver) return;
+                setRunning(true);
+              }}
+              disabled={running || gameOver}
+              style={{ opacity: running || gameOver ? 0.6 : 1 }}
+            >
+              Start
+            </button>
+
+            <button
+              className="btn"
+              onClick={() => setRunning((r) => !r)}
+              disabled={gameOver}
+              style={{ opacity: gameOver ? 0.6 : 1 }}
+            >
+              {running ? "Pause" : "Resume"}
+            </button>
+
+            <button className="btn" onClick={resetGame}>
+              Reset
+            </button>
+          </div>
+
+          <div className="hint">Controls: Arrow Keys / WASD • Space = Pause/Resume</div>
         </div>
-      )}
-    </section>
+      </div>
+    </main>
   );
 }
