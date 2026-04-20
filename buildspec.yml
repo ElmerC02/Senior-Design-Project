@@ -3,13 +3,21 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      nodejs: 20
+      nodejs: 18
     commands:
+      - echo Installing dependencies...
       - npm ci
+
   build:
     commands:
+      - echo Building the Express backend...
       - npm run build
+
+  post_build:
+    commands:
+      - echo Build complete.
 
 artifacts:
   files:
     - '**/*'
+  base-directory: dist
