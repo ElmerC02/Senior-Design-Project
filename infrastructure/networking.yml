@@ -12,6 +12,32 @@ Parameters:
     Default: production
     AllowedValues: [production, staging, development]
 
+  BackendPort:
+    Type: Number
+    Default: 4000
+    Description: Port the Express backend runs on
+
+  InstanceType:
+    Type: String
+    Default: t3.micro
+    AllowedValues: [t3.micro, t3.small, t3.medium]
+    Description: EC2 instance type for the backend server
+
+  DBPort:
+    Type: Number
+    Default: 5432
+    Description: PostgreSQL database port
+
+  DBName:
+    Type: String
+    Default: umgdb
+    Description: Database name
+
+  DBUsername:
+    Type: String
+    Default: umgadmin
+    Description: Database admin username
+
 Resources:
   BackendSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -21,8 +47,8 @@ Resources:
       VpcId: !Ref VpcId
       SecurityGroupIngress:
         - IpProtocol: tcp
-          FromPort: 4000
-          ToPort: 4000
+          FromPort: !Ref BackendPort
+          ToPort: !Ref BackendPort
           CidrIp: 0.0.0.0/0
           Description: Allow backend traffic
         - IpProtocol: tcp
@@ -51,3 +77,19 @@ Outputs:
     Value: !Ref BackendSecurityGroup
     Export:
       Name: !Sub umg-backend-sg-${Environment}
+
+  BackendPort:
+    Description: Backend port
+    Value: !Ref BackendPort
+
+  InstanceType:
+    Description: EC2 instance type
+    Value: !Ref InstanceType
+
+  DBPort:
+    Description: Database port
+    Value: !Ref DBPort
+
+  DBName:
+    Description: Database name
+    Value: !Ref DBName
