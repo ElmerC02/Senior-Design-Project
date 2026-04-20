@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Security groups for UMG Express backend
+
+Parameters:
+  VpcId:
+    Type: String
+    Default: vpc-0149212116d92f81e
+    Description: Existing VPC ID
+
+  Environment:
+    Type: String
+    Default: production
+    AllowedValues: [production, staging, development]
+
+Resources:
+  BackendSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub umg-backend-sg-${Environment}
+      GroupDescription: Security group for Express backend
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 4000
+          ToPort: 4000
+          CidrIp: 0.0.0.0/0
+          Description: Allow backend traffic
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTPS
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+          Description: Allow SSH
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub umg-backend-sg-${Environment}
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  BackendSecurityGroupId:
+    Description: Backend Security Group ID
+    Value: !Ref BackendSecurityGroup
+    Export:
+      Name: !Sub umg-backend-sg-${Environment}
