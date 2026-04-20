@@ -3,7 +3,7 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      nodejs: 18
+      nodejs: 20
     commands:
       - echo Installing dependencies...
       - npm ci
@@ -11,7 +11,7 @@ phases:
   build:
     commands:
       - echo Building the Express backend...
-      - npm run build
+      - npm run build --workspace=@umg/server
 
   post_build:
     commands:
@@ -20,4 +20,4 @@ phases:
 artifacts:
   files:
     - '**/*'
-  base-directory: dist
+  base-directory: apps/server/dist
